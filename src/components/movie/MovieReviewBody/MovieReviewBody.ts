@@ -7,7 +7,7 @@ import Movie from '../../../domain/Movie/Movie';
 
 import { createElement } from '../../../utils/dom/createElement/createElement';
 import { querySelector } from '../../../utils/dom/selector';
-import { on } from '../../../utils/dom/eventListener/eventListener';
+import { bindObserver } from '../../../utils/bindObserver';
 
 import { ELEMENT_SELECTOR } from '../../../constants/selector';
 
@@ -19,9 +19,18 @@ interface MovieReviewBodyProps {
 
 class MovieReviewBody extends Component<MovieReviewBodyProps> {
   private movie: Movie | undefined;
+  private observer: IntersectionObserver | undefined;
 
   protected initializeState(): void {
     this.movie = new Movie(1, this.props?.movieType ?? '');
+
+    this.observer = bindObserver(this.handleUpdateMovieList.bind(this));
+  }
+
+  private handleUpdateMovieList() {
+    const $movieListContainer = querySelector<HTMLDivElement>(ELEMENT_SELECTOR.movieListContainer);
+
+    this.updateMovieList($movieListContainer);
   }
 
   protected render() {
@@ -34,10 +43,13 @@ class MovieReviewBody extends Component<MovieReviewBodyProps> {
       attributeOptions: { id: 'movie-review-section', class: 'item-view' },
     });
 
-    new MovieTitle($section, { movieType: this.props?.movieType ?? '' });
+    const $div = createElement({ tagName: 'div', attributeOptions: { class: 'movie-review-title-container' } });
+
+    new MovieTitle($div, { movieType: this.props?.movieType ?? '' });
+
+    $section.appendChild($div);
 
     $section.appendChild(this.createMovieListContainer());
-    $section.appendChild(this.createMoreButton());
 
     return $section;
   }
@@ -65,28 +77,25 @@ class MovieReviewBody extends Component<MovieReviewBodyProps> {
     this.movie?.setPage(1);
 
     this.movie?.fetchMovieDetails({
-      onSuccess: (data) => {
+      onSuccess: (movieItemDetails) => {
+        if (!this.observer) return;
+
         $ul.remove();
 
         new MovieList($movieListContainer, {
-          movieItemDetails: data?.results ?? [],
-          removeMoreButton: this.removeMoreButton.bind(this),
+          movieItemDetails,
+          observer: this.observer,
         });
       },
 
       onError: (error) => {
         if (error instanceof Error) {
-          console.error(error.message);
+          console.error(error);
 
           this.openErrorFallbackModal();
         }
       },
     });
-  }
-
-  private removeMoreButton() {
-    const $button = querySelector<HTMLButtonElement>(ELEMENT_SELECTOR.moreButton, this.$element);
-    $button.remove();
   }
 
   private openErrorFallbackModal() {
@@ -95,29 +104,8 @@ class MovieReviewBody extends Component<MovieReviewBodyProps> {
     $modal.showModal();
   }
 
-  private createMoreButton() {
-    return createElement({
-      tagName: 'button',
-      text: '더보기',
-      attributeOptions: { id: 'more-button', class: 'btn primary full-width' },
-    });
-  }
-
-  protected setEvent(): void {
-    on({
-      target: querySelector<HTMLButtonElement>(ELEMENT_SELECTOR.moreButton, this.$element),
-      eventName: 'click',
-      eventHandler: this.handleMoreButtonClick.bind(this),
-    });
-  }
-
-  private handleMoreButtonClick() {
-    const $movieListContainer = querySelector<HTMLDivElement>(ELEMENT_SELECTOR.movieListContainer);
-    this.updateMovieList($movieListContainer);
-
-    if (this.movie && this.movie.isMaxPage()) {
-      this.removeMoreButton();
-    }
+  removeScroll() {
+    this.observer?.disconnect();
   }
 }
 
