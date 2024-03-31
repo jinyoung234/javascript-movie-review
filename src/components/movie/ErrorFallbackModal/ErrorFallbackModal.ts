@@ -20,6 +20,12 @@ class ErrorFallbackModal extends Component {
     });
   }
 
+  static open() {
+    const $modal = querySelector<HTMLDialogElement>(ELEMENT_SELECTOR.errorFallBackModal);
+
+    $modal.showModal();
+  }
+
   protected createComponent() {
     return /* html */ `
       <img id="warning-image" class="warning-image" src="${WarningImage}" alt="경고 이미지" />
@@ -30,10 +36,10 @@ class ErrorFallbackModal extends Component {
 
   protected setEvent(): void {
     const button = querySelector<HTMLButtonElement>(ELEMENT_SELECTOR.reloadButton, this.$element);
-    on({ target: button, eventName: 'click', eventHandler: this.handleClickReloadButton });
+    on({ target: button, eventName: 'click', eventHandler: this.reloadPage });
   }
 
-  private handleClickReloadButton() {
+  private reloadPage() {
     window.location.reload();
   }
 }

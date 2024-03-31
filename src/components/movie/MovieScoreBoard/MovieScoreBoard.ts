@@ -1,5 +1,6 @@
 import Component from '../../common/Component/Component';
 import { isMovieRateScore } from './MovieScoreBoard.util';
+import { MOVIE_SCORE_MESSAGE } from './MovieScoreBoard.constant';
 
 import MovieDetail from '../../../domain/MovieDetail/MovieDetail';
 
@@ -20,15 +21,6 @@ interface MovieScoreBoardProps {
 }
 
 class MovieScoreBoard extends Component<MovieScoreBoardProps> {
-  static MOVIE_SCORE_GUIDANCE = {
-    0: '별점을 부여해주세요.',
-    2: '최악이예요',
-    4: '별로예요',
-    6: '보통이에요',
-    8: '재미있어요',
-    10: '명작이에요',
-  } as const;
-
   protected render() {
     this.$element.append(this.createComponent());
 
@@ -54,7 +46,7 @@ class MovieScoreBoard extends Component<MovieScoreBoardProps> {
           <img data-value="5" src="${EmptyStar}" />
         </div>
         <span id="movie-score-board-rating">${ratingScore}</span>
-        <span id="movie-score-board-need-rating" class="movie-score-board-need-rating">${MovieScoreBoard.MOVIE_SCORE_GUIDANCE[ratingScore]}</span>
+        <span id="movie-score-board-need-rating" class="movie-score-board-need-rating">${MOVIE_SCORE_MESSAGE[ratingScore]}</span>
       `;
 
       return $movieScoreBoard;
@@ -69,11 +61,11 @@ class MovieScoreBoard extends Component<MovieScoreBoardProps> {
     on({
       target,
       eventName: 'click',
-      eventHandler: this.handleClickStarImage.bind(this),
+      eventHandler: this.renderMovieScoreBoard.bind(this),
     });
   }
 
-  private handleClickStarImage(event: Event) {
+  private renderMovieScoreBoard(event: Event) {
     if (event.target instanceof HTMLElement && event.target.dataset.value) {
       const ratingScore = Number(event.target.dataset.value) * 2;
 
@@ -95,7 +87,7 @@ class MovieScoreBoard extends Component<MovieScoreBoardProps> {
     if (isMovieRateScore(ratingScore)) {
       const $ratingNeedRating = querySelector(ELEMENT_SELECTOR.movieScoreBoardNeedRating, this.$element);
 
-      $ratingNeedRating.textContent = MovieScoreBoard.MOVIE_SCORE_GUIDANCE[ratingScore];
+      $ratingNeedRating.textContent = MOVIE_SCORE_MESSAGE[ratingScore];
     }
   }
 

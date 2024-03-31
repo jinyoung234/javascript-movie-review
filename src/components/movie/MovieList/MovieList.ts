@@ -12,17 +12,20 @@ import { ELEMENT_SELECTOR } from '../../../constants/selector';
 import { NoResultImage } from '../../../assets';
 
 import './MovieList.css';
+import MovieReviewDetailModal from '../MovieReviewDetailModal/MovieReviewDetailModal';
 
 interface MovieListProps {
   movieItemDetails: MovieInterface[];
   observer: IntersectionObserver;
+  isEmptyMovieListItems: boolean;
+  isMaxMovieListItems: boolean;
 }
 
 class MovieList extends Component<MovieListProps> {
   protected render() {
     if (!this.props?.movieItemDetails) return;
 
-    if (this.props?.movieItemDetails.length === 0) {
+    if (this.props?.isEmptyMovieListItems) {
       new Image(this.$element, {
         image: NoResultImage,
         class: 'no-result-image',
@@ -32,7 +35,7 @@ class MovieList extends Component<MovieListProps> {
       return;
     }
 
-    if (this.props?.movieItemDetails.length === 20) {
+    if (this.props?.isMaxMovieListItems) {
       const observerTarget = querySelector(ELEMENT_SELECTOR.observerTarget);
 
       this.props?.observer.observe(observerTarget);
@@ -47,7 +50,10 @@ class MovieList extends Component<MovieListProps> {
     this.props?.movieItemDetails.forEach((movieItemDetail) => {
       const $li = createElement({ tagName: 'li' });
 
-      new MovieListCard($li, movieItemDetail);
+      new MovieListCard($li, {
+        ...movieItemDetail,
+        onClick: () => MovieReviewDetailModal.rerender(movieItemDetail.id),
+      });
 
       $movieItemList.appendChild($li);
     });

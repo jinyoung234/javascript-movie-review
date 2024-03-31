@@ -1,12 +1,13 @@
 import Component from '../../common/Component/Component';
 import MovieList from '../MovieList/MovieList';
 import MovieTitle from '../MovieTitle/MovieTitle';
-import { renderSkeletonList } from '../MovieListCardSkeleton/MovieListCardSkeleton.util';
+import MovieListCardSkeleton from '../MovieListCardSkeleton/MovieListCardSkeleton';
+import ErrorFallbackModal from '../ErrorFallbackModal/ErrorFallbackModal';
 
 import Movie from '../../../domain/Movie/Movie';
 
 import { createElement } from '../../../utils/dom/createElement/createElement';
-import { querySelector } from '../../../utils/dom/selector';
+import { querySelector, querySelectorAll } from '../../../utils/dom/selector';
 import { bindObserver } from '../../../utils/bindObserver';
 
 import { ELEMENT_SELECTOR } from '../../../constants/selector';
@@ -21,13 +22,25 @@ class MovieReviewBody extends Component<MovieReviewBodyProps> {
   private movie: Movie | undefined;
   private observer: IntersectionObserver | undefined;
 
+  static rerender(movieName: string) {
+    const $section = querySelector<HTMLElement>(ELEMENT_SELECTOR.movieReviewSection);
+    $section.remove();
+
+    const $main = querySelector<HTMLElement>(ELEMENT_SELECTOR.main);
+    new MovieReviewBody($main, { movieType: movieName });
+  }
+
   protected initializeState(): void {
     this.movie = new Movie(1, this.props?.movieType ?? '');
 
-    this.observer = bindObserver(this.handleUpdateMovieList.bind(this));
+    this.observer = bindObserver(this.generateInfiniteScroll.bind(this));
   }
 
-  private handleUpdateMovieList() {
+  private generateInfiniteScroll() {
+    const skeletonList = querySelectorAll(ELEMENT_SELECTOR.skeletonItemCard, this.$element);
+
+    if (skeletonList.length > 0) return;
+
     const $movieListContainer = querySelector<HTMLDivElement>(ELEMENT_SELECTOR.movieListContainer);
 
     this.updateMovieList($movieListContainer);
@@ -35,6 +48,9 @@ class MovieReviewBody extends Component<MovieReviewBodyProps> {
 
   protected render() {
     this.$element.append(this.createComponent());
+    this.$element.append(
+      createElement({ tagName: 'div', attributeOptions: { id: 'observer-target', class: 'observer-target' } }),
+    );
   }
 
   protected createComponent() {
@@ -68,40 +84,34 @@ class MovieReviewBody extends Component<MovieReviewBodyProps> {
   private updateMovieList($movieListContainer: HTMLElement) {
     const $ul = createElement({ tagName: 'ul', attributeOptions: { class: 'item-list' } });
 
-    renderSkeletonList($movieListContainer, $ul, 8);
+    MovieListCardSkeleton.renderSkeletonList($movieListContainer, $ul, 8);
 
     this.renderMovieList($movieListContainer, $ul);
   }
 
-  private renderMovieList($movieListContainer: HTMLElement, $ul: HTMLElement) {
-    this.movie?.setPage(1);
+  private async renderMovieList($movieListContainer: HTMLElement, $ul: HTMLElement) {
+    if (!this.observer || !this.movie) return;
 
-    this.movie?.fetchMovieDetails({
-      onSuccess: (movieItemDetails) => {
-        if (!this.observer) return;
+    try {
+      this.movie?.setPage(1);
 
-        $ul.remove();
+      const movieItemDetails = await this.movie?.fetchMovieDetails();
 
-        new MovieList($movieListContainer, {
-          movieItemDetails,
-          observer: this.observer,
-        });
-      },
+      MovieListCardSkeleton.hideSkeletonList($ul);
 
-      onError: (error) => {
-        if (error instanceof Error) {
-          console.error(error);
+      new MovieList($movieListContainer, {
+        movieItemDetails,
+        observer: this.observer,
+        isEmptyMovieListItems: this.movie.isEmptyMovieItems(movieItemDetails),
+        isMaxMovieListItems: this.movie.isMaxMovieItems(movieItemDetails),
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(error);
 
-          this.openErrorFallbackModal();
-        }
-      },
-    });
-  }
-
-  private openErrorFallbackModal() {
-    const $modal = querySelector<HTMLDialogElement>(ELEMENT_SELECTOR.errorFallBackModal);
-
-    $modal.showModal();
+        ErrorFallbackModal.open();
+      }
+    }
   }
 
   removeScroll() {

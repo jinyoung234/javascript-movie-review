@@ -1,30 +1,19 @@
-import MovieAPI from '../../apis/movie/movie';
+import MovieFetcher from '../../apis/MovieFetcher/MovieFetcher';
 import type { MovieDetailInterface, MovieDetailResponse, RateDetail } from './MovieDetail.type';
 
 import MovieStorage from '../../storages/MovieStorage';
 
 class MovieDetail {
-  static fetchMovieDetail(
-    id: string,
-    {
-      onSuccess,
-      onError,
-    }: {
-      onSuccess: (movieDetail: MovieDetailInterface & RateDetail) => void;
-      onError: (error: Error | unknown) => void;
-    },
-  ) {
-    MovieAPI.fetchMovieDetail(id)
-      .then((data: MovieDetailResponse) => {
-        onSuccess({
-          ...data,
-          image: data.poster_path,
-          score: data.vote_average,
-          genres: data.genres.map(({ name }) => name).join(', '),
-          ratingScore: this.getRatingScore(id),
-        });
-      })
-      .catch(onError);
+  static async fetchMovieDetail(id: string): Promise<MovieDetailInterface & Pick<RateDetail, 'ratingScore'>> {
+    const movieDetailResponse: MovieDetailResponse = await MovieFetcher.fetchMovieDetail(id);
+
+    return {
+      ...movieDetailResponse,
+      image: `${process.env.IMAGE_BASE_URL}/w220_and_h330_face/${movieDetailResponse.poster_path}`,
+      score: movieDetailResponse.vote_average,
+      genres: movieDetailResponse.genres.map(({ name }) => name).join(', '),
+      ratingScore: this.getRatingScore(id),
+    };
   }
 
   private static getRatingScore(id: string) {
